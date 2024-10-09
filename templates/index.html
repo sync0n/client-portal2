@@ -1,0 +1,102 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Company Name</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        /* Additional styles for dashboard images and layout */
+        .dashboard-list {
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .dashboard-item {
+            width: 200px; /* Adjust the width as needed */
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            background-color: #fff;
+        }
+
+        .dashboard-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .dashboard-image {
+            width: 100%;
+            height: 120px; /* Adjust the height as needed */
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .dashboard-name {
+            display: block;
+            margin-top: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .dashboard-name:hover {
+            color: #007BFF;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .dashboard-item {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Company Name</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('user_data') }}">User Settings</a></li>
+                <li><a href="{{ url_for('integrations') }}">Integrations and Data</a></li>
+                <li><a href="{{ url_for('alarm_settings') }}">Alarm Settings</a></li>
+                <li><a href="{{ url_for('poa_credentials') }}">POA</a></li>
+                <li><a href="{{ url_for('housing_association') }}">Housing Association Settings</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="content">
+        <h1>Welcome, {{ current_user.username }}</h1>
+
+        <h2>Your Available Dashboards:</h2>
+        {% if dashboard_links %}
+            <ul class="dashboard-list">
+                {% for dashboard in dashboard_links %}
+                    <li class="dashboard-item">
+                        <a href="{{ dashboard.url }}" target="_blank">
+                            {% if dashboard.image %}
+                                <img src="{{ dashboard.image }}" alt="{{ dashboard.name }}" class="dashboard-image">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='images/default.jpg') }}" alt="Default Image" class="dashboard-image">
+                            {% endif %}
+                            <span class="dashboard-name">{{ dashboard.name }}</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No dashboards found. Please try again later.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

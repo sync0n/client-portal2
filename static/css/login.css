@@ -1,0 +1,88 @@
+/* static/css/login.css */
+
+/* Reset styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+}
+
+/* Container for the login elements */
+.login-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Left side image */
+.login-image {
+    flex: 1;
+    display: none; /* Hide on mobile devices */
+}
+
+.login-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Right side login form */
+.login-form {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.login-form h2 {
+    margin-bottom: 20px;
+    font-size: 28px;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.login-form button {
+    padding: 12px 15px;
+    background-color: #333;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.login-form button:hover {
+    background-color: #575757;
+}
+
+.login-form p {
+    margin-top: 20px;
+    line-height: 1.6;
+    color: #555;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    .login-image {
+        display: block; /* Show on larger screens */
+    }
+}
+
+@media (max-width: 767px) {
+    .login-form {
+        padding: 20px;
+    }
+}

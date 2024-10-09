@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Housing Association Settings - Company Name</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Company Name</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('user_data') }}">User Settings</a></li>
+                <li><a href="{{ url_for('integrations') }}">Integrations and Data</a></li>
+                <li><a href="{{ url_for('alarm_settings') }}">Alarm Settings</a></li>
+                <li><a href="{{ url_for('poa_credentials') }}">POA</a></li>
+                <li><a href="{{ url_for('housing_association') }}">Housing Association Settings</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="content">
+        <h1>Housing Association Settings</h1>
+
+        <!-- Development Notice -->
+        <div style="border: 2px dashed red; padding: 10px; margin-bottom: 20px; background-color: #fdf1f1;">
+            <strong>Note:</strong> This page is currently under development. Some features may not be functional yet.
+        </div>
+
+        <section>
+            <h2>List of Housing Associations</h2>
+            <ul>
+                <li>
+                    <strong>Housing Association 1:</strong>
+                    <p>Description: Example description for housing association 1.</p>
+                    <p>Board Members: John Doe, Jane Smith</p>
+                    <p>Other Roles:</p>
+                    <ul>
+                        <li>Fire Alarm Technician: Mike Johnson</li>
+                        <li>Plumber: Sarah Connor</li>
+                    </ul>
+                    <p>Managing Organisations: Org 1, Org 2</p>
+                    <p>Buildings:</p>
+                    <ul>
+                        <li>Building A: Address, People and Roles</li>
+                        <li>Building B: Address, People and Roles</li>
+                    </ul>
+                </li>
+                <!-- Add more housing associations as needed -->
+            </ul>
+            <p style="color: orange; font-style: italic;">* More housing associations will be added in future updates.</p>
+        </section>
+
+        <section>
+            <h2>Account and Invoice View</h2>
+            <button class="button" disabled>View Account and Invoice Details</button>
+            <p style="color: red; font-style: italic;">* Account and invoice details will be available soon.</p>
+            <div class="details">
+                <p>Detailed cost overview per building and device types.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Our Corporate Details</h2>
+            <p>Company Name, Address, Contact Info.</p>
+            <p style="color: gray;">* More corporate details will be added in future updates.</p>
+        </section>
+    </div>
+</body>
+</html>

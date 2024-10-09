@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alarm Settings - Company Name</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Company Name</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('user_data') }}">User Settings</a></li>
+                <li><a href="{{ url_for('integrations') }}">Integrations and Data</a></li>
+                <li><a href="{{ url_for('alarm_settings') }}">Alarm Settings</a></li>
+                <li><a href="{{ url_for('poa_credentials') }}">POA</a></li>
+                <li><a href="{{ url_for('housing_association') }}">Housing Association Settings</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="content">
+        <h1>Alarm Settings</h1>
+
+        <!-- Development Notice -->
+        <div style="border: 2px dashed red; padding: 10px; margin-bottom: 20px; background-color: #fdf1f1;">
+            <strong>Note:</strong> This page is currently under development. Some features may not be functional yet.
+        </div>
+
+        <!-- Historic List of Alarms Section -->
+        <section>
+            <h2>Historic List of Alarms</h2>
+            <ul>
+                <li>Device ID: 123, Alarm Type: Temperature, Time: 2024-07-22 10:00, Phone Numbers: +1234567890</li>
+                <li>Device ID: 456, Alarm Type: Motion, Time: 2024-07-21 08:00, Phone Numbers: +0987654321</li>
+                <!-- Add more alarms as needed -->
+            </ul>
+            <p style="color: orange; font-style: italic;">* More historical alarms will be shown once the development is completed.</p>
+        </section>
+
+        <!-- Alarm Receiving Phone Numbers Section -->
+        <section>
+            <h2>Alarm Receiving Phone Numbers</h2>
+            <ul>
+                <li>Primary: +1234567890 (From user data and settings)</li>
+                <li>Secondary: +0987654321</li>
+            </ul>
+            <button disabled>Add Additional Phone Number</button>
+            <p style="color: red; font-style: italic;">* Adding more phone numbers will be available soon.</p>
+        </section>
+
+        <!-- Device Type Tied Alarm Explanation Section -->
+        <section>
+            <h2>Device Type Tied Alarm Explanation</h2>
+            <p>Example: Water temperature alarms for freezing are only possible with Axioma device.</p>
+            <p style="color: gray;">* More explanations for other devices will be added in the future updates.</p>
+        </section>
+
+        <!-- SMS Pricing Information Section -->
+        <section>
+            <h2>SMS Pricing Information</h2>
+            <p>Each SMS costs 0.09 Euros. Explanation that these are default alarms coming from the device, e.g., pipe breach.</p>
+            <p style="color: gray;">* SMS pricing and alarm conditions will be expanded with more details soon.</p>
+        </section>
+    </div>
+</body>
+</html>

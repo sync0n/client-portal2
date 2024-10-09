@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrations and Data Export - Company Name</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Company Name</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('user_data') }}">User Settings</a></li>
+                <li><a href="{{ url_for('integrations') }}">Integrations and Data</a></li>
+                <li><a href="{{ url_for('alarm_settings') }}">Alarm Settings</a></li>
+                <li><a href="{{ url_for('poa_credentials') }}">POA</a></li>
+                <li><a href="{{ url_for('housing_association') }}">Housing Association Settings</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+    
+    <div class="content">
+        <h1>Integrations and Data Export</h1>
+
+        <!-- Development Notice -->
+        <div style="border: 2px dashed red; padding: 10px; margin-bottom: 20px; background-color: #fdf1f1;">
+            <strong>Note:</strong> This page is currently under development. Some features may not be functional yet.
+        </div>
+
+        <!-- Export Section -->
+        <section class="export-section">
+            <h2>Export List (sorted by building)</h2>
+            <div class="export-controls">
+                <label for="export-format">Format:</label>
+                <select id="export-format" class="input-select" disabled>
+                    <option value="csv">CSV</option>
+                    <option value="xlsx">Excel</option>
+                </select>
+                
+                <label for="export-email">Send to:</label>
+                <input type="email" id="export-email" placeholder="Enter email address" class="input-field" disabled>
+                
+                <button class="button" disabled>Export</button>
+
+                <!-- Feature not ready notice -->
+                <p style="color: red; font-style: italic;">* Export functionality coming soon!</p>
+            </div>
+        </section>
+
+        <!-- Integration List Section -->
+        <section class="integration-section">
+            <h2>Integration List (sorted by building)</h2>
+            <ul class="integration-list">
+                <li>
+                    <strong>Building 1:</strong>
+                    <ul class="integration-details">
+                        <li>Type: Example Integration, Status: Active</li>
+                        <li>Type: Another Integration, Status: Inactive</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Building 2:</strong>
+                    <ul class="integration-details">
+                        <li>Type: Example Integration, Status: Active</li>
+                        <li>Type: Another Integration, Status: Inactive</li>
+                    </ul>
+                </li>
+            </ul>
+            <!-- Development progress indicator -->
+            <p style="color: orange; font-style: italic;">* More integrations will be added in future updates.</p>
+        </section>
+
+        <!-- Report a Bug Section -->
+        <section class="bug-report-section">
+            <h2>Report a Bug</h2>
+            <a href="#" class="button">Contact Support</a>
+            <p style="color: gray;">If you encounter issues, feel free to report them. We're working on fixing them as the development progresses.</p>
+        </section>
+    </div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Data and Settings - Company Name</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Company Name</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('user_data') }}">User Settings</a></li>
+                <li><a href="{{ url_for('integrations') }}">Integrations and Data</a></li>
+                <li><a href="{{ url_for('alarm_settings') }}">Alarm Settings</a></li>
+                <li><a href="{{ url_for('poa_credentials') }}">POA</a></li>
+                <li><a href="{{ url_for('housing_association') }}">Housing Association Settings</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="content">
+        <h1>User Data and Settings</h1>
+        <form action="{{ url_for('user_data') }}" method="POST" class="form-layout">
+            <label for="username">User Name:</label>
+            <input type="text" id="username" name="username" value="{{ current_user.username }}" required class="input-field">
+
+            <label for="email">Contact Email:</label>
+            <input type="email" id="email" name="email" value="{{ current_user.email }}" required class="input-field">
+
+            <label for="phone">Contact Phone:</label>
+            <input type="tel" id="phone" name="phone" value="{{ current_user.phone }}" required class="input-field">
+
+            <label for="address">Address:</label>
+            <input type="text" id="address" name="address" value="{{ current_user.address }}" required class="input-field">
+
+            <button type="submit" class="button">Update Information</button>
+            <button type="button" class="button" onclick="window.location.href='{{ url_for('create_new_password') }}'">Change Password</button>
+        </form>
+    </div>
+</body>
+</html>

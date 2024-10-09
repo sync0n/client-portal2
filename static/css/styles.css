@@ -1,0 +1,270 @@
+/* styles.css */
+
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: row; /* Ensure side-by-side layout */
+    background-color: #f4f4f4; /* Light gray background */
+    color: #333;
+    min-height: 100vh; /* Ensure body takes full viewport height */
+}
+
+header, footer {
+    display: none; /* Hiding header and footer to match design */
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #2c3e50; /* Dark Blue */
+    color: white;
+    padding: 20px;
+    box-sizing: border-box;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    position: fixed; /* Keep sidebar fixed on larger screens */
+    top: 0;
+    left: 0;
+    height: 100%;
+    overflow-y: auto; /* Allow scrolling if content overflows */
+}
+
+.sidebar h1 {
+    font-size: 26px;
+    margin: 0 0 20px;
+    text-transform: uppercase;
+}
+
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar nav ul li {
+    margin: 15px 0;
+}
+
+.sidebar nav ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 18px;
+    transition: color 0.3s ease;
+}
+
+.sidebar nav ul li a:hover {
+    color: #2980b9; /* Darker blue for hover */
+}
+
+.content {
+    margin-left: 270px; /* Adjusting for sidebar width */
+    padding: 40px;
+    background-color: white; /* White background for content area */
+    flex: 1;
+    box-sizing: border-box;
+    min-height: 100vh; /* Ensure content area takes full viewport height */
+}
+
+h1, h2 {
+    color: #2c3e50;
+}
+
+h1 {
+    font-size: 36px;
+    margin-top: 0;
+}
+
+h2 {
+    font-size: 24px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+section {
+    margin-bottom: 40px;
+}
+
+.showcase-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.showcase-images img {
+    width: calc(33.333% - 20px); /* Adjust width to fit three images per row */
+    height: auto;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.showcase-images img:hover {
+    transform: scale(1.05);
+}
+
+/* Login Container Styles */
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 30px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background-color: #fff;
+    box-sizing: border-box;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-container h2 {
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 28px;
+}
+
+.login-container form {
+    display: flex;
+    flex-direction: column;
+}
+
+.login-container label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.login-container input {
+    margin-bottom: 15px;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.login-container button {
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    background-color: #3498db;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.login-container button:hover {
+    background-color: #2980b9;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        position: relative;
+        height: auto;
+        box-shadow: none;
+        margin-bottom: 20px; /* Add space between sidebar and content */
+    }
+
+    .content {
+        margin-left: 0;
+        min-height: auto; /* Allow content to adjust height as needed */
+    }
+
+    .login-container {
+        margin: 50px auto;
+        padding: 20px;
+        width: 90%;
+    }
+
+    .showcase-images img {
+        width: 100%; /* One image per row */
+    }
+
+    .sidebar h1 {
+        font-size: 22px;
+    }
+
+    .sidebar nav ul li a {
+        font-size: 16px;
+    }
+
+    .content {
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 28px;
+    }
+
+    h2 {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 992px) {
+    .showcase-images img {
+        width: calc(50% - 20px); /* Two images per row */
+    }
+}
+
+/* Ensure form fields are stacked vertically */
+.form-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Optional: Adds space between fields */
+}
+
+.input-field {
+    width: 100%;
+    box-sizing: border-box; /* Ensure padding and border are included in width */
+}
+
+label {
+    margin-bottom: 5px;
+}
+
+button {
+    margin-top: 10px;
+}
+
+
+@media (max-width: 480px) {
+    .login-container {
+        margin: 30px auto;
+        padding: 15px;
+    }
+
+    .login-container input, .login-container button {
+        padding: 10px;
+        font-size: 16px;
+    }
+
+    .sidebar nav ul li {
+        margin: 10px 0;
+    }
+
+    .content {
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
+}
+
+/* Optional: Hide the sidebar on very small screens */
+@media (max-width: 400px) {
+    .sidebar {
+        display: none;
+    }
+
+    .content {
+        margin-left: 0;
+    }
+}
+
