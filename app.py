@@ -8,6 +8,8 @@ import boto3
 from botocore.exceptions import ClientError
 import json
 from cryptography.fernet import Fernet
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 def get_flask_secret_key():
     secret_name = "prod/flask_secret_key"
@@ -95,6 +97,30 @@ else:
     print("Encryption key not found. Exiting.")
     exit(1)
 
+def get_secret():
+ 
+    secret_name = "sendgrid"
+    region_name = "eu-central-1"
+ 
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+ 
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise e
+ 
+    secret = get_secret_value_response['SecretString']
+    return secret
+
 # User model
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -144,8 +170,8 @@ def load_user(user_id):
 
 # Utility functions
 def check_user_in_thingsboard(email, tenant_token):
-    url = f"http://3.79.179.54:8080/api/v1/accounts?email={email}"
-    #url = f"http://10.0.5.16:8080/api/v1/accounts?email={email}"
+    #url = f"http://3.79.179.54:8081/api/v1/accounts?email={email}"
+    url = f"http://10.0.5.16:8080/api/v1/accounts?email={email}"
 
     headers = {"Authorization": f"Bearer {tenant_token}"}
     print(f"Checking user in ThingsBoard: {email}")
@@ -239,6 +265,26 @@ def get_user_token(username, password):
         return token
     print(f"Failed to get user token for {username} from ThingsBoard.")
     return None
+
+def send_email(client_email, issue_description):
+
+    message = Mail(
+        from_email='admin@noranet-infra.net',
+        to_emails='support@noranet.io',
+        subject=f'Portal support request: {client_email}',
+        html_content=issue_description)
+
+    # Send an HTTP POST request to /mail/send
+    try:
+        sg = SendGridAPIClient(get_secret())
+        # sg = SendGridAPIClient('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')
+        response = sg.send(message)
+        print(f'{client_email} status {response.status_code}')
+        # print(response.body)
+        # print(response.headers)
+
+    except Exception as e:
+        print('Error', str(e))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -479,6 +525,21 @@ def poa_credentials():
 @login_required
 def user_data():
     return render_template('user_data.html')
+
+@app.route('/contact_support', methods=['GET', 'POST'])
+@login_required
+def contact_support():
+    if request.method == 'POST':
+        description = request.form.get('description')
+        try:
+            send_email(current_user.username, description)
+            flash("Email sent successfully!", "success")
+        except Exception as e:
+            flash(f"An error occurred: {e}", "error")
+        
+
+    return render_template('contact_support.html')
+
 
 @app.route('/thingsboard_login', methods=['POST'])
 def thingsboard_login():

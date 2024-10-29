@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Support - Company Name</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Company Name</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('user_data') }}">User Settings</a></li>
+                <li><a href="{{ url_for('integrations') }}">Integrations and Data</a></li>
+                <li><a href="{{ url_for('alarm_settings') }}">Alarm Settings</a></li>
+                <li><a href="{{ url_for('poa_credentials') }}">POA</a></li>
+                <li><a href="{{ url_for('housing_association') }}">Housing Association Settings</a></li>
+                <li><a href="{{ url_for('contact_support') }}">Contact Support</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="content">
+        <h1>Contact Support</h1>
+        <p>Describe shortly what issue you have encountered and our support team will contact you via email</p>
+        <form action="{{ url_for('contact_support') }}" method="POST" class="form-layout">
+          <label for="description">Issue:</label>
+          <input type="text" id="description" name="description" value="" required class="input-field">
+
+          <button type="submit" class="button">Send</button>
+      </form>
+    </div>
+    {% with messages = get_flashed_messages(category_filter=["success"]) %}
+        {% if messages %}
+        <div class="success-message" role="alert">
+            <p>{{messages[-1]}}</p>
+        </div>
+        {% endif %}
+        {% endwith %}
+</body>
+</html>

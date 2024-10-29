@@ -6,3 +6,4 @@ botocore==1.29.0
 requests==2.31.0
 pycryptodome==3.18.0
 Werkzeug==2.2.3
+sendgrid==6.11.0
