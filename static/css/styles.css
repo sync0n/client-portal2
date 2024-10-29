@@ -152,6 +152,19 @@ section {
     background-color: #2980b9;
 }
 
+.success-message {
+    position: absolute;
+    width: 250px;
+    height: 51px;
+    bottom: 0;
+    right: 0;
+    background-color: lightgreen;
+    text-align: center;
+    margin: 20px;
+    box-shadow: 8px 8px 8px 0 lightgray;
+    border-radius: 7px
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     body {
