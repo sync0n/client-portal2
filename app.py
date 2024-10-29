@@ -277,7 +277,6 @@ def send_email(client_email, issue_description):
     # Send an HTTP POST request to /mail/send
     try:
         sg = SendGridAPIClient(get_secret())
-        # sg = SendGridAPIClient('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')
         response = sg.send(message)
         print(f'{client_email} status {response.status_code}')
         # print(response.body)
