@@ -7,17 +7,14 @@ on:
       - staging
 
 permissions:
-  id-token: write
+  id-token: write  # Enables the OIDC token for authentication with AWS
   contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true
-
-    outputs:
-      image_tag: ${{ steps.build_image.outputs.image_tag }}
+      ACTIONS_STEP_DEBUG: true  # Enables step debugging for detailed logs
 
     steps:
       - name: Check out code
@@ -28,20 +25,51 @@ jobs:
           echo "Current working directory: $(pwd)"
           ls -l
 
-      - name: Build Docker Image
-        id: build_image
+      - name: Install jq (if needed)
         run: |
-          export IMAGE_TAG=${GITHUB_SHA}
-          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$IMAGE_TAG .
-        outputs:
-          image_tag: $GITHUB_SHA
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Request and Print OIDC Token
+        id: oidc-token
+        run: |
+          echo "Requesting OIDC token..."
+          if [[ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" || -z "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]]; then
+            echo "OIDC token environment variables are missing."
+            exit 1
+          fi
+          curl -sSL -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS credentials
+        run: |
+          echo "Testing AWS credentials configuration..."
+          aws sts get-caller-identity || echo "Failed to retrieve AWS credentials, check role ARN or permissions."
+
+      - name: Debug AWS environment variables
+        run: |
+          echo "Environment variables:"
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}"
+          echo "AWS configuration files:"
+          cat ~/.aws/config || echo "No AWS config file found"
+          cat ~/.aws/credentials || echo "No AWS credentials file found"
+
+      - name: Build Docker Image
+        run: |
+          echo "Starting Docker build..."
+          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA . || echo "Docker build failed."
+          echo "Docker build complete."
 
   push_to_ecr:
     needs: build
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true
-      IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+      ACTIONS_STEP_DEBUG: true  # Enables step debugging for detailed logs
 
     steps:
       - name: Configure AWS credentials
@@ -57,8 +85,7 @@ jobs:
 
       - name: Push to ECR
         run: |
-          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:${IMAGE_TAG} ${{ secrets.ECR_REPOSITORY_URI }}:latest
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:${IMAGE_TAG}
+          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
   deploy_staging:
@@ -66,8 +93,7 @@ jobs:
     if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true
-      IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+      ACTIONS_STEP_DEBUG: true  # Enables step debugging for detailed logs
 
     steps:
       - name: Configure AWS credentials
@@ -79,15 +105,14 @@ jobs:
       - name: Deploy to Staging
         run: |
           ssh -i ${{ secrets.STAGING_SSH_KEY }} ubuntu@${{ secrets.STAGING_HOST }} \
-          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:${IMAGE_TAG} && docker-compose up -d"
+          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
 
   deploy_production:
     needs: push_to_ecr
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true
-      IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+      ACTIONS_STEP_DEBUG: true  # Enables step debugging for detailed logs
 
     steps:
       - name: Configure AWS credentials
@@ -99,4 +124,4 @@ jobs:
       - name: Deploy to Production
         run: |
           ssh -i ${{ secrets.PRODUCTION_SSH_KEY }} ubuntu@${{ secrets.PRODUCTION_HOST }} \
-          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:${IMAGE_TAG} && docker-compose up -d"
+          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
