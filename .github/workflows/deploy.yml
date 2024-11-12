@@ -40,8 +40,12 @@ jobs:
           cat ~/.aws/config || echo "No AWS config file found"
           cat ~/.aws/credentials || echo "No AWS credentials file found"
 
-      - name: List Environment Variables
-        run: env  # Lists all environment variables to confirm OIDC token setup
+      - name: Request and Print OIDC Token
+        id: oidc-token
+        run: |
+          echo "Requesting OIDC token..."
+          curl -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq
 
       - name: Build Docker Image
         run: |
