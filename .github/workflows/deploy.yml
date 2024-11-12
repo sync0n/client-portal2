@@ -14,7 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true  # Enables step debugging for detailed logs
+      ACTIONS_STEP_DEBUG: true
+      GITHUB_SHA: ${{ github.sha }}  # Explicitly defining GITHUB_SHA
 
     steps:
       - name: Check out code
@@ -62,14 +63,18 @@ jobs:
       - name: Build Docker Image
         run: |
           echo "Starting Docker build..."
-          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA . || echo "Docker build failed."
+          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
+          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
           echo "Docker build complete."
+
+      - name: List Docker Images for Debugging
+        run: docker images
 
   push_to_ecr:
     needs: build
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true  # Enables step debugging for detailed logs
+      ACTIONS_STEP_DEBUG: true
 
     steps:
       - name: Configure AWS credentials
@@ -85,7 +90,7 @@ jobs:
 
       - name: Push to ECR
         run: |
-          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
   deploy_staging:
@@ -93,7 +98,7 @@ jobs:
     if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true  # Enables step debugging for detailed logs
+      ACTIONS_STEP_DEBUG: true
 
     steps:
       - name: Configure AWS credentials
@@ -112,7 +117,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true  # Enables step debugging for detailed logs
+      ACTIONS_STEP_DEBUG: true
 
     steps:
       - name: Configure AWS credentials
