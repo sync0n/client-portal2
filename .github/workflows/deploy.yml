@@ -33,6 +33,7 @@ jobs:
         run: |
           export IMAGE_TAG=${GITHUB_SHA}
           docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$IMAGE_TAG .
+        # Set the output `image_tag` directly from the job's context, not within the run command
         outputs:
           image_tag: $GITHUB_SHA
 
