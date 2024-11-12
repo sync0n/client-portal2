@@ -12,12 +12,11 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-        with:
-          persist-credentials: false
+
       - name: Confirm code checkout
         run: |
           echo "Current working directory: $(pwd)"
-          ls -al
+          ls -l
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -25,8 +24,8 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
         env:
-          ACTIONS_STEP_DEBUG: true
-        continue-on-error: true
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Verify AWS credentials
         run: |
@@ -34,12 +33,12 @@ jobs:
           echo "AWS_REGION: ${{ secrets.AWS_REGION }}"
           echo "Attempting to retrieve AWS caller identity..."
           aws sts get-caller-identity || echo "Failed to retrieve AWS credentials, check role ARN or permissions."
-        continue-on-error: true
 
       - name: Debug AWS environment variables
         run: |
           echo "Environment variables:"
-          env | grep -i "aws"
+          echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}"
+          echo "AWS_REGION=${AWS_REGION}"
           echo "AWS configuration files:"
           cat ~/.aws/config || echo "No AWS config file found"
           cat ~/.aws/credentials || echo "No AWS credentials file found"
@@ -59,24 +58,16 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-        env:
-          ACTIONS_STEP_DEBUG: true
-        continue-on-error: true
 
-      - name: Verify AWS credentials for ECR
+      - name: Login to Amazon ECR
         run: |
-          echo "Attempting to login to ECR..."
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-            | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }} || echo "ECR login failed."
-        continue-on-error: true
+            | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
 
-      - name: Push Docker Image to ECR
+      - name: Push to ECR
         run: |
-          echo "Tagging Docker image..."
-          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest || echo "Docker tag failed."
-          echo "Pushing Docker image to ECR..."
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest || echo "Docker push failed."
-        continue-on-error: true
+          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
   deploy_staging:
     needs: push_to_ecr
@@ -88,15 +79,10 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-        env:
-          ACTIONS_STEP_DEBUG: true
-        continue-on-error: true
 
       - name: Deploy to Staging
-        run: |
-          echo "Starting deployment to staging server..."
-          ssh -i ${{ secrets.STAGING_SSH_KEY }} ubuntu@${{ secrets.STAGING_HOST }} \
-            "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d" || echo "Deployment to staging server failed."
+        run: ssh -i ${{ secrets.STAGING_SSH_KEY }} ubuntu@${{ secrets.STAGING_HOST }} \
+          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
 
   deploy_production:
     needs: push_to_ecr
@@ -108,12 +94,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-        env:
-          ACTIONS_STEP_DEBUG: true
-        continue-on-error: true
 
       - name: Deploy to Production
-        run: |
-          echo "Starting deployment to production server..."
-          ssh -i ${{ secrets.PRODUCTION_SSH_KEY }} ubuntu@${{ secrets.PRODUCTION_HOST }} \
-            "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d" || echo "Deployment to production server failed."
+        run: ssh -i ${{ secrets.PRODUCTION_SSH_KEY }} ubuntu@${{ secrets.PRODUCTION_HOST }} \
+          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
