@@ -52,20 +52,16 @@ jobs:
           echo "Testing AWS credentials configuration..."
           aws sts get-caller-identity || echo "Failed to retrieve AWS credentials, check role ARN or permissions."
 
-      - name: Debug AWS environment variables
-        run: |
-          echo "Environment variables:"
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}"
-          echo "AWS configuration files:"
-          cat ~/.aws/config || echo "No AWS config file found"
-          cat ~/.aws/credentials || echo "No AWS credentials file found"
-
       - name: Build Docker Image
         run: |
           echo "Starting Docker build..."
           docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
-          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
           echo "Docker build complete."
+
+      - name: Tag Docker Image
+        run: |
+          echo "Tagging Docker image with 'latest'..."
+          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
       - name: List Docker Images for Debugging
         run: docker images
@@ -88,10 +84,19 @@ jobs:
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
             | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
 
-      - name: Push to ECR
+      - name: Confirm Docker Images are Available for Push
         run: |
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
+          echo "Available Docker images:"
+          docker images
+          echo "Verifying if image ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA exists locally..."
+          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "Image with SHA tag not found!"; exit 1; }
+          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:latest || { echo "Image with 'latest' tag not found!"; exit 1; }
+
+      - name: Push SHA Tagged Image to ECR
+        run: docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+
+      - name: Push Latest Tagged Image to ECR
+        run: docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
   deploy_staging:
     needs: push_to_ecr
