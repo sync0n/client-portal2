@@ -33,7 +33,6 @@ jobs:
         run: |
           export IMAGE_TAG=${GITHUB_SHA}
           docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$IMAGE_TAG .
-        # Set the output `image_tag` directly from the job's context, not within the run command
         outputs:
           image_tag: $GITHUB_SHA
 
@@ -68,6 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ACTIONS_STEP_DEBUG: true
+      IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
 
     steps:
       - name: Configure AWS credentials
@@ -79,7 +79,7 @@ jobs:
       - name: Deploy to Staging
         run: |
           ssh -i ${{ secrets.STAGING_SSH_KEY }} ubuntu@${{ secrets.STAGING_HOST }} \
-          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
+          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:${IMAGE_TAG} && docker-compose up -d"
 
   deploy_production:
     needs: push_to_ecr
@@ -87,6 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ACTIONS_STEP_DEBUG: true
+      IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
 
     steps:
       - name: Configure AWS credentials
@@ -98,4 +99,4 @@ jobs:
       - name: Deploy to Production
         run: |
           ssh -i ${{ secrets.PRODUCTION_SSH_KEY }} ubuntu@${{ secrets.PRODUCTION_HOST }} \
-          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
+          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:${IMAGE_TAG} && docker-compose up -d"
