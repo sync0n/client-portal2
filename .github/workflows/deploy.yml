@@ -42,20 +42,13 @@ jobs:
 
       - name: Build and Tag Docker Image
         run: |
-          echo "Building Docker image with SHA: $GITHUB_SHA"
           docker build -t client-portal:$GITHUB_SHA .
-          echo "Tagging image with SHA: $GITHUB_SHA and latest"
           docker tag client-portal:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
           docker tag client-portal:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
-      - name: List Docker Images
-        run: docker images
-
       - name: Push Docker Image to ECR
         run: |
-          echo "Pushing Docker image with SHA tag"
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
-          echo "Pushing Docker image with latest tag"
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
   deploy_staging:
@@ -74,7 +67,9 @@ jobs:
 
       - name: Deploy to Staging
         run: |
-          ssh -i ${{ secrets.STAGING_SSH_KEY }} ubuntu@${{ secrets.STAGING_HOST }} \
+          echo "${{ secrets.STAGING_SSH_KEY }}" > staging_key.pem
+          chmod 600 staging_key.pem
+          ssh -i staging_key.pem ubuntu@${{ secrets.STAGING_HOST }} \
           "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
 
   deploy_production:
@@ -93,5 +88,7 @@ jobs:
 
       - name: Deploy to Production
         run: |
-          ssh -i ${{ secrets.PRODUCTION_SSH_KEY }} ubuntu@${{ secrets.PRODUCTION_HOST }} \
+          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > production_key.pem
+          chmod 600 production_key.pem
+          ssh -i production_key.pem ubuntu@${{ secrets.PRODUCTION_HOST }} \
           "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
