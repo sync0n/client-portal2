@@ -14,68 +14,34 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true
       GITHUB_SHA: ${{ github.sha }}
 
     steps:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Confirm code checkout
-        run: |
-          echo "Current working directory: $(pwd)"
-          ls -l
-
-      - name: Install jq (if needed)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-      - name: List Files in Working Directory
-        run: ls -R
-
-      - name: Check Docker Daemon
-        run: docker info || { echo "Docker daemon not running"; exit 1; }
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Start Docker Build with SHA Tag
-        id: docker_build
         run: |
           echo "Starting Docker build with SHA tag..."
-          docker build --progress=plain --no-cache -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
+          docker build --no-cache -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
           echo "Docker build with SHA tag completed."
 
-      - name: List Docker Images After Build
-        run: docker images
-
-      - name: Verify SHA Tag Using Docker Inspect
+      - name: Verify SHA Tagged Image Locally
         run: |
-          echo "Checking if Docker image with SHA tag exists..."
-          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "SHA tag not found!"; exit 1; }
+          echo "Verifying that Docker image with SHA tag exists locally..."
+          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "SHA tag not found locally!"; exit 1; }
 
-      - name: Tag Docker Image as 'latest' with Reload
+      - name: Tag Docker Image as 'latest'
         run: |
-          echo "Reloading Docker image list before tagging as 'latest'..."
-          docker images
           echo "Tagging Docker image as 'latest'..."
           docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
           echo "Tagging complete."
-
-      - name: Verify Latest Tag Exists with Docker Inspect
-        run: |
-          echo "Checking if Docker image with 'latest' tag exists..."
-          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:latest || { echo "Image with 'latest' tag not found!"; exit 1; }
 
   push_to_ecr:
     needs: build
     runs-on: ubuntu-latest
     env:
-      ACTIONS_STEP_DEBUG: true
+      GITHUB_SHA: ${{ github.sha }}
 
     steps:
       - name: Configure AWS credentials
@@ -90,45 +56,11 @@ jobs:
             | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
 
       - name: Push SHA Tagged Image to ECR
-        run: docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+        run: |
+          echo "Pushing SHA-tagged Docker image to ECR..."
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "Failed to push SHA-tagged image!"; exit 1; }
 
       - name: Push Latest Tagged Image to ECR
-        run: docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
-
-  deploy_staging:
-    needs: push_to_ecr
-    if: github.ref == 'refs/heads/staging'
-    runs-on: ubuntu-latest
-    env:
-      ACTIONS_STEP_DEBUG: true
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy to Staging
         run: |
-          ssh -i ${{ secrets.STAGING_SSH_KEY }} ubuntu@${{ secrets.STAGING_HOST }} \
-          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
-
-  deploy_production:
-    needs: push_to_ecr
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    env:
-      ACTIONS_STEP_DEBUG: true
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy to Production
-        run: |
-          ssh -i ${{ secrets.PRODUCTION_SSH_KEY }} ubuntu@${{ secrets.PRODUCTION_HOST }} \
-          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
+          echo "Pushing 'latest'-tagged Docker image to ECR..."
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest || { echo "Failed to push 'latest'-tagged image!"; exit 1; }
