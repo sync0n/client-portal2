@@ -31,6 +31,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
 
+      - name: List Files in Working Directory
+        run: ls -R  # Confirm all files are in place for the Docker build
+
+      - name: Check Docker Daemon
+        run: docker info || { echo "Docker daemon not running"; exit 1; }
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -41,7 +47,7 @@ jobs:
         id: docker_build
         run: |
           echo "Starting Docker build with SHA tag..."
-          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
+          docker build --progress=plain --no-cache -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
           echo "Docker build with SHA tag completed."
 
       - name: Check if SHA Tagged Image Exists
