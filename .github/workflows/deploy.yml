@@ -3,31 +3,60 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main  # Deploy to production on push to main
-      - staging  # Deploy to staging on push to staging
-  pull_request:
-    branches:
-      - main  # Run pipeline on PR to main
+      - main
+      - staging
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_STEP_DEBUG: true
+      GITHUB_SHA: ${{ github.sha }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v2
 
-      - name: Build Docker Image
-        run: docker build -t client-portal:$GITHUB_SHA .
-
-      - name: Tag Docker Image for ECR
+      - name: Install dependencies
         run: |
-          docker tag client-portal:$GITHUB_SHA ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:latest
-          docker tag client-portal:$GITHUB_SHA ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:$GITHUB_SHA
+          sudo apt-get update
+          sudo apt-get install -y jq
 
-  push_to_ecr:
+      - name: Check Docker Daemon
+        run: docker info || { echo "Docker daemon not running"; exit 1; }
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+            | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+
+      - name: Build and Tag Docker Image
+        run: |
+          docker build -t client-portal:$GITHUB_SHA .
+          docker tag client-portal:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+          docker tag client-portal:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
+
+      - name: Push Docker Image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
+
+  deploy_staging:
     needs: build
+    if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_STEP_DEBUG: true
 
     steps:
       - name: Configure AWS credentials
@@ -36,19 +65,17 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Log in to Amazon ECR
+      - name: Deploy to Staging
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ssh -i ${{ secrets.STAGING_SSH_KEY }} ubuntu@${{ secrets.STAGING_HOST }} \
+          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
 
-      - name: Push Docker Images to ECR
-        run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:latest
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:$GITHUB_SHA
-
-  deploy:
-    needs: push_to_ecr
+  deploy_production:
+    needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'staging' }}
+    env:
+      ACTIONS_STEP_DEBUG: true
 
     steps:
       - name: Configure AWS credentials
@@ -57,16 +84,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Log in to Amazon ECR
+      - name: Deploy to Production
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-
-      - name: Pull Docker Image
-        run: |
-          docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:latest
-
-      - name: Run Docker Container
-        run: |
-          docker stop client-portal || true
-          docker rm client-portal || true
-          docker run -d --name client-portal -p 80:80 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:latest
+          ssh -i ${{ secrets.PRODUCTION_SSH_KEY }} ubuntu@${{ secrets.PRODUCTION_HOST }} \
+          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
