@@ -7,7 +7,7 @@ on:
       - staging
 
 permissions:
-  id-token: write  # Enables the OIDC token for authentication with AWS
+  id-token: write
   contents: read
 
 jobs:
@@ -37,20 +37,28 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Build Docker Image
+      - name: Start Docker Build with SHA Tag
+        id: docker_build
         run: |
-          echo "Starting Docker build..."
+          echo "Starting Docker build with SHA tag..."
           docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
-          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
-          echo "Docker build complete."
+          echo "Docker build with SHA tag completed."
 
-      - name: Verify Docker Images Exist with Correct Tags
+      - name: Check if SHA Tagged Image Exists
         run: |
-          echo "Available Docker images:"
-          docker images
-          echo "Verifying if image ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA exists locally..."
-          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "Image with SHA tag not found!"; exit 1; }
-          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:latest || { echo "Image with 'latest' tag not found!"; exit 1; }
+          echo "Verifying SHA-tagged Docker image..."
+          docker images | grep "${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA" || (echo "Image with SHA tag not found!"; exit 1)
+
+      - name: Tag Docker Image as 'latest'
+        run: |
+          echo "Tagging Docker image as 'latest'..."
+          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
+          echo "Tagging complete."
+
+      - name: Check if Latest Tagged Image Exists
+        run: |
+          echo "Verifying 'latest'-tagged Docker image..."
+          docker images | grep "${{ secrets.ECR_REPOSITORY_URI }}:latest" || (echo "Image with 'latest' tag not found!"; exit 1)
 
   push_to_ecr:
     needs: build
