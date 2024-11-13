@@ -3,45 +3,42 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main
-      - staging
-
-permissions:
-  id-token: write
-  contents: read
+      - main  # Deploy to production on push to main
+      - staging  # Deploy to staging on push to staging
+  pull_request:
+    branches:
+      - main  # Run tests on PR to main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_SHA: ${{ github.sha }}
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Start Docker Build with SHA Tag
-        run: |
-          echo "Starting Docker build with SHA tag..."
-          docker build --no-cache -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
-          echo "Docker build with SHA tag completed."
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-      - name: Verify SHA Tagged Image Locally
-        run: |
-          echo "Verifying that Docker image with SHA tag exists locally..."
-          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "SHA tag not found locally!"; exit 1; }
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - name: Tag Docker Image as 'latest'
+      - name: Run Tests
+        run: pytest
+
+      - name: Build Docker Image
+        run: docker build -t client-portal:$GITHUB_SHA .
+
+      - name: Tag Docker Image for ECR
         run: |
-          echo "Tagging Docker image as 'latest'..."
-          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
-          echo "Tagging complete."
+          docker tag client-portal:$GITHUB_SHA ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:latest
+          docker tag client-portal:$GITHUB_SHA ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:$GITHUB_SHA
 
   push_to_ecr:
     needs: build
     runs-on: ubuntu-latest
-    env:
-      GITHUB_SHA: ${{ github.sha }}
 
     steps:
       - name: Configure AWS credentials
@@ -50,17 +47,37 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: Log in to Amazon ECR
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-            | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-      - name: Push SHA Tagged Image to ECR
+      - name: Push Docker Images to ECR
         run: |
-          echo "Pushing SHA-tagged Docker image to ECR..."
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "Failed to push SHA-tagged image!"; exit 1; }
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:$GITHUB_SHA
 
-      - name: Push Latest Tagged Image to ECR
+  deploy:
+    needs: push_to_ecr
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'staging' }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
         run: |
-          echo "Pushing 'latest'-tagged Docker image to ECR..."
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest || { echo "Failed to push 'latest'-tagged image!"; exit 1; }
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+      - name: Pull Docker Image
+        run: |
+          docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:latest
+
+      - name: Run Docker Container
+        run: |
+          docker stop client-portal || true
+          docker rm client-portal || true
+          docker run -d --name client-portal -p 80:80 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/client-portal:latest
