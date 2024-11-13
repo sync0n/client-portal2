@@ -50,10 +50,13 @@ jobs:
           docker build --progress=plain --no-cache -t ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA .
           echo "Docker build with SHA tag completed."
 
-      - name: Check if SHA Tagged Image Exists
+      - name: List Docker Images After Build
+        run: docker images  # Lists all images to confirm if the SHA tag was applied
+
+      - name: Verify SHA Tag Using Docker Inspect
         run: |
-          echo "Verifying SHA-tagged Docker image..."
-          docker images | grep "${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA" || (echo "Image with SHA tag not found!"; exit 1)
+          echo "Checking if Docker image with SHA tag exists..."
+          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "SHA tag not found!"; exit 1; }
 
       - name: Tag Docker Image as 'latest'
         run: |
@@ -64,7 +67,7 @@ jobs:
       - name: Check if Latest Tagged Image Exists
         run: |
           echo "Verifying 'latest'-tagged Docker image..."
-          docker images | grep "${{ secrets.ECR_REPOSITORY_URI }}:latest" || (echo "Image with 'latest' tag not found!"; exit 1)
+          docker images | grep "${{ secrets.ECR_REPOSITORY_URI }}:latest" || { echo "Image with 'latest' tag not found!"; exit 1; }
 
   push_to_ecr:
     needs: build
