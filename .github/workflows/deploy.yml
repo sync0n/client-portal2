@@ -32,7 +32,7 @@ jobs:
           sudo apt-get install -y jq
 
       - name: List Files in Working Directory
-        run: ls -R  # Confirm all files are in place for the Docker build
+        run: ls -R
 
       - name: Check Docker Daemon
         run: docker info || { echo "Docker daemon not running"; exit 1; }
@@ -51,23 +51,25 @@ jobs:
           echo "Docker build with SHA tag completed."
 
       - name: List Docker Images After Build
-        run: docker images  # Lists all images to confirm if the SHA tag was applied
+        run: docker images
 
       - name: Verify SHA Tag Using Docker Inspect
         run: |
           echo "Checking if Docker image with SHA tag exists..."
           docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA || { echo "SHA tag not found!"; exit 1; }
 
-      - name: Tag Docker Image as 'latest'
+      - name: Tag Docker Image as 'latest' with Reload
         run: |
+          echo "Reloading Docker image list before tagging as 'latest'..."
+          docker images
           echo "Tagging Docker image as 'latest'..."
           docker tag ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
           echo "Tagging complete."
 
-      - name: Check if Latest Tagged Image Exists
+      - name: Verify Latest Tag Exists with Docker Inspect
         run: |
-          echo "Verifying 'latest'-tagged Docker image..."
-          docker images | grep "${{ secrets.ECR_REPOSITORY_URI }}:latest" || { echo "Image with 'latest' tag not found!"; exit 1; }
+          echo "Checking if Docker image with 'latest' tag exists..."
+          docker image inspect ${{ secrets.ECR_REPOSITORY_URI }}:latest || { echo "Image with 'latest' tag not found!"; exit 1; }
 
   push_to_ecr:
     needs: build
