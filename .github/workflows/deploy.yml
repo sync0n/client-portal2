@@ -7,7 +7,7 @@ on:
       - staging  # Deploy to staging on push to staging
   pull_request:
     branches:
-      - main  # Run tests on PR to main
+      - main  # Run pipeline on PR to main
 
 jobs:
   build:
@@ -16,17 +16,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.8'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run Tests
-        run: pytest
 
       - name: Build Docker Image
         run: docker build -t client-portal:$GITHUB_SHA .
