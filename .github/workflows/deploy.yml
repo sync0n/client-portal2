@@ -93,6 +93,8 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i production_key.pem ubuntu@${{ secrets.PRODUCTION_HOST }} << EOF
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
             docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest
+            cd /home/ubuntu/client-portal
             docker-compose up -d
           EOF
+
 
