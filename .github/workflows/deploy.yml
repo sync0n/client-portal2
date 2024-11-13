@@ -90,5 +90,5 @@ jobs:
         run: |
           echo "${{ secrets.PRODUCTION_SSH_KEY }}" > production_key.pem
           chmod 600 production_key.pem
-          ssh -i production_key.pem ubuntu@${{ secrets.PRODUCTION_HOST }} \
+          ssh -o StrictHostKeyChecking=no -i production_key.pem ubuntu@${{ secrets.PRODUCTION_HOST }} \
           "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
