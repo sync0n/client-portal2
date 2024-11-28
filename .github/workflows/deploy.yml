@@ -19,18 +19,13 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+        uses: actions/checkout@v3
 
       - name: Check Docker Daemon
         run: docker info || { echo "Docker daemon not running"; exit 1; }
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
@@ -57,20 +52,23 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ACTIONS_STEP_DEBUG: true
+      GITHUB_SHA: ${{ github.sha }}
 
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to Staging
+      - name: Deploy to Staging via SSM
         run: |
-          echo "${{ secrets.STAGING_SSH_KEY }}" > staging_key.pem
-          chmod 600 staging_key.pem
-          ssh -i staging_key.pem ubuntu@${{ secrets.STAGING_HOST }} \
-          "docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest && docker-compose up -d"
+          aws ssm send-command \
+            --instance-ids "${{ secrets.STAGING_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploying latest build to staging" \
+            --parameters "{\"commands\":[\"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}\",\"docker pull ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA\",\"cd /home/ubuntu/client-portal\",\"docker-compose up -d\"]}" \
+            --region ${{ secrets.AWS_REGION }}
 
   deploy_production:
     needs: build
@@ -78,23 +76,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ACTIONS_STEP_DEBUG: true
+      GITHUB_SHA: ${{ github.sha }}
 
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to Production
+      - name: Deploy to Production via SSM
         run: |
-          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > production_key.pem
-          chmod 600 production_key.pem
-          ssh -o StrictHostKeyChecking=no -i production_key.pem ubuntu@${{ secrets.PRODUCTION_HOST }} << EOF
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
-            docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest
-            cd /home/ubuntu/client-portal
-            docker-compose up -d
-          EOF
-
-
+          aws ssm send-command \
+            --instance-ids "${{ secrets.PRODUCTION_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploying latest build to production" \
+            --parameters "{\"commands\":[\"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}\",\"docker pull ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA\",\"cd /home/ubuntu/client-portal\",\"docker-compose up -d\"]}" \
+            --region ${{ secrets.AWS_REGION }}
