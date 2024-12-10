@@ -14,11 +14,11 @@ jobs:
         run: |
           sudo rm -rf /home/ubuntu/actions-runner/_work/client-portal/*
 
-      # 2. Check Out Code
+      # 2. Check Out the Latest Code
       - name: Check out code
         uses: actions/checkout@v3
         with:
-          path: client-portal
+          path: client-portal # Ensures repo is cloned into 'client-portal' directory
 
       # 3. Debug Workspace Structure
       - name: Debug Workspace
