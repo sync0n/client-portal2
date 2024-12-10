@@ -17,19 +17,21 @@ jobs:
       # 2. Log in to AWS ECR
       - name: Log in to AWS ECR
         run: |
-          aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
 
       # 3. Build Docker Image
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:${{ github.sha }} .
+        run: |
+          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }} .
 
       # 4. Push Docker Image to ECR
       - name: Push Docker Image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:${{ github.sha }}
-          docker tag ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:${{ github.sha }} \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:latest
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:latest
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }}
+          docker tag ${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }} \
+            ${{ secrets.ECR_REPOSITORY_URI }}:latest
+          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
   deploy:
     runs-on: self-hosted
@@ -39,11 +41,12 @@ jobs:
       # 1. Log in to AWS ECR
       - name: Log in to AWS ECR
         run: |
-          aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
 
       # 2. Pull Docker Image from ECR
       - name: Pull Docker Image
-        run: docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:latest
+        run: docker pull ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
       # 3. Deploy Docker Image
       - name: Run Docker Container
@@ -53,7 +56,7 @@ jobs:
           docker run -d \
             --name client-portal \
             -p 5000:5000 \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:latest
+            ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
       # 4. Verify Deployment
       - name: Check Running Containers
