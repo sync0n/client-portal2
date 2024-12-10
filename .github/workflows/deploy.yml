@@ -4,38 +4,57 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    runs-on: self-hosted
+  build-and-push:
+    runs-on: self-hosted  # Use your self-hosted runner
     steps:
-      # 1. Clean Workspace
-      - name: Clean Workspace
-        run: |
-          sudo rm -rf /home/ubuntu/actions-runner/_work/client-portal/*
-
-      # 2. Check Out the Latest Code
-      - name: Check out code
+      # 1. Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          path: client-portal # Ensures repo is cloned into 'client-portal' directory
 
-      # 3. Debug Workspace Structure
-      - name: Debug Workspace
+      # 2. Log in to AWS ECR
+      - name: Log in to AWS ECR
         run: |
-          ls -la /home/ubuntu/actions-runner/_work
-          ls -la /home/ubuntu/actions-runner/_work/client-portal
+          aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com
 
-      # 4. Log in to Amazon ECR
-      - name: Log in to Amazon ECR
-        run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-            | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+      # 3. Build Docker Image
+      - name: Build Docker Image
+        run: docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:${{ github.sha }} .
 
-      # 5. Build and Push Docker Image
-      - name: Build and Push Docker Image
+      # 4. Push Docker Image to ECR
+      - name: Push Docker Image to ECR
         run: |
-          cd /home/ubuntu/actions-runner/_work/client-portal
-          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:${{ github.sha }} .
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:${{ github.sha }}
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:${{ github.sha }}
+          docker tag ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:${{ github.sha }} \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:latest
+
+  deploy:
+    runs-on: self-hosted
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    steps:
+      # 1. Log in to AWS ECR
+      - name: Log in to AWS ECR
+        run: |
+          aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com
+
+      # 2. Pull Docker Image from ECR
+      - name: Pull Docker Image
+        run: docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:latest
+
+      # 3. Deploy Docker Image
+      - name: Run Docker Container
+        run: |
+          docker stop client-portal || true
+          docker rm client-portal || true
+          docker run -d \
+            --name client-portal \
+            -p 5000:5000 \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/client-portal:latest
+
+      # 4. Verify Deployment
+      - name: Check Running Containers
+        run: docker ps -a
