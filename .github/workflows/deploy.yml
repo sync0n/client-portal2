@@ -8,29 +8,20 @@ on:
 jobs:
   build-and-deploy:
     runs-on: self-hosted
-    env:
-      ACTIONS_STEP_DEBUG: true
-      GITHUB_SHA: ${{ github.sha }}
-
     steps:
+      # 1. Clean Workspace to Remove Stale Files
+      - name: Clean Workspace
+        run: |
+          sudo rm -rf /home/ubuntu/actions-runner/_work/client-portal/
+      
+      # 2. Check Out the Latest Code
       - name: Check out code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch the full repository to avoid shallow clones
 
-      - name: Log in to Amazon ECR
-        run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-            | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
-
+      # 3. Build Docker Image with Updated Code
       - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:${{ github.sha }} .
-          docker tag ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:${{ github.sha }} \
-            ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:latest
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:${{ github.sha }}
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:latest
-
-      - name: Deploy Docker Image
-        run: |
-          cd /home/ubuntu/client-portal
-          docker-compose down
-          docker-compose up -d
+          docker build -t 533267227148.dkr.ecr.eu-central-1.amazonaws.com/client-portal:${{ github.sha }} .
+          docker push 533267227148.dkr.ecr.eu-central-1.amazonaws.com/client-portal:${{ github.sha }}
