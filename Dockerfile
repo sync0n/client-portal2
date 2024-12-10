@@ -22,4 +22,3 @@ EXPOSE 5000
 
 # Command to run the app
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "wsgi:app"]
-
