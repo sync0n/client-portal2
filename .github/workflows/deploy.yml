@@ -41,6 +41,11 @@ jobs:
           docker tag client-portal:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
           docker tag client-portal:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
 
+      - name: Debug Docker Image Content
+        run: |
+          docker run --rm client-portal:$GITHUB_SHA ls -l /app
+          docker run --rm client-portal:$GITHUB_SHA cat /app/requirements.txt
+
       - name: Push Docker Image to ECR
         run: |
           docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
