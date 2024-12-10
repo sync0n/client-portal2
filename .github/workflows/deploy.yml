@@ -9,20 +9,21 @@ jobs:
   build-and-deploy:
     runs-on: self-hosted
     steps:
-      # 1. Clean Workspace to Remove Stale Files
+      # 1. Clean Workspace
       - name: Clean Workspace
         run: |
           sudo rm -rf /home/ubuntu/actions-runner/_work/client-portal/*
 
-      # 2. Check Out the Latest Code
+      # 2. Check Out Code
       - name: Check out code
         uses: actions/checkout@v3
         with:
-          path: client-portal # Ensure repo is cloned into 'client-portal' directory
+          path: client-portal
 
       # 3. Debug Workspace Structure
       - name: Debug Workspace
         run: |
+          ls -la /home/ubuntu/actions-runner/_work
           ls -la /home/ubuntu/actions-runner/_work/client-portal
 
       # 4. Log in to Amazon ECR
@@ -36,14 +37,5 @@ jobs:
         run: |
           cd /home/ubuntu/actions-runner/_work/client-portal
           docker build -t ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:${{ github.sha }} .
-          docker tag ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:${{ github.sha }} \
-            ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:latest
           docker push ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:${{ github.sha }}
           docker push ${{ secrets.ECR_REPOSITORY_URI }}/client-portal:latest
-
-      # 6. Deploy to Server Using Docker Compose
-      - name: Deploy to Production
-        run: |
-          cd /home/ubuntu/client-portal
-          docker-compose down
-          docker-compose up -d
