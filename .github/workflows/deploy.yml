@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Simple CI/CD Pipeline
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     env:
       ACTIONS_STEP_DEBUG: true
@@ -21,80 +21,25 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Check Docker Daemon
-        run: docker info || { echo "Docker daemon not running"; exit 1; }
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Log in to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-            | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+            | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
-      - name: Build and Tag Docker Image
+      - name: Build and Push Docker Image
         run: |
-          docker build --no-cache -t client-portal:$GITHUB_SHA .
-          docker tag client-portal:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
-          docker tag client-portal:$GITHUB_SHA ${{ secrets.ECR_REPOSITORY_URI }}:latest
+          docker build -t ${{ secrets.ECR_REGISTRY }}/client-portal:${{ github.sha }} .
+          docker tag ${{ secrets.ECR_REGISTRY }}/client-portal:${{ github.sha }} \
+            ${{ secrets.ECR_REGISTRY }}/client-portal:latest
+          docker push ${{ secrets.ECR_REGISTRY }}/client-portal:${{ github.sha }}
+          docker push ${{ secrets.ECR_REGISTRY }}/client-portal:latest
 
-      - name: Debug Docker Image Content
+      - name: Deploy to Server
         run: |
-          docker run --rm client-portal:$GITHUB_SHA ls -l /app
-          docker run --rm client-portal:$GITHUB_SHA cat /app/requirements.txt
-
-      - name: Push Docker Image to ECR
-        run: |
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:latest
-
-  deploy_staging:
-    needs: build
-    if: github.ref == 'refs/heads/staging'
-    runs-on: ubuntu-latest
-    env:
-      ACTIONS_STEP_DEBUG: true
-      GITHUB_SHA: ${{ github.sha }}
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy to Staging via SSM
-        run: |
+          DEPLOY_INSTANCE=$([[ "${{ github.ref }}" == "refs/heads/main" ]] && echo "${{ secrets.PRODUCTION_INSTANCE_ID }}" || echo "${{ secrets.STAGING_INSTANCE_ID }}")
           aws ssm send-command \
-            --instance-ids "${{ secrets.STAGING_INSTANCE_ID }}" \
+            --instance-ids "$DEPLOY_INSTANCE" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploying latest build to staging" \
-            --parameters "{\"commands\":[\"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}\",\"docker pull ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA\",\"cd /home/ubuntu/client-portal\",\"docker-compose up -d\"]}" \
-            --region ${{ secrets.AWS_REGION }}
-
-  deploy_production:
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    env:
-      ACTIONS_STEP_DEBUG: true
-      GITHUB_SHA: ${{ github.sha }}
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy to Production via SSM
-        run: |
-          aws ssm send-command \
-            --instance-ids "${{ secrets.PRODUCTION_INSTANCE_ID }}" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploying latest build to production" \
-            --parameters "{\"commands\":[\"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}\",\"docker pull ${{ secrets.ECR_REPOSITORY_URI }}:$GITHUB_SHA\",\"cd /home/ubuntu/client-portal\",\"docker-compose up -d\"]}" \
+            --comment "Deploying latest build" \
+            --parameters "{\"commands\":[\"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}\",\"docker pull ${{ secrets.ECR_REGISTRY }}/client-portal:${{ github.sha }}\",\"cd /home/ubuntu/client-portal\",\"docker-compose down && docker-compose up -d\"]}" \
             --region ${{ secrets.AWS_REGION }}

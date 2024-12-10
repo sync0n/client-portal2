@@ -1,20 +1,19 @@
 # Dockerfile
 FROM python:3.8-slim
 
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV INSTANCE_PATH=/app/instance
+
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy requirements first to leverage Docker caching
-COPY requirements.txt .
-
 # Install dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
-
-# Set instance folder path for SQLite
-ENV INSTANCE_PATH=/app/instance
 
 # Create instance folder
 RUN mkdir -p $INSTANCE_PATH
