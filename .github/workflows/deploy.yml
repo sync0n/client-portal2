@@ -4,11 +4,10 @@ on:
   push:
     branches:
       - main
-      - staging
 
 jobs:
   build-and-deploy:
-    runs-on: ${{ github.ref == 'refs/heads/main' && 'self-hosted-production' || 'self-hosted-staging' }}
+    runs-on: self-hosted
     env:
       ACTIONS_STEP_DEBUG: true
       GITHUB_SHA: ${{ github.sha }}
