@@ -56,7 +56,7 @@ else:
 if not os.path.exists(app.instance_path):
     os.makedirs(app.instance_path)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'users.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:yX8XeC23X272@portal-postgres.czay2i6mgluq.eu-central-1.rds.amazonaws.com:5432/postgres'
 db = SQLAlchemy(app)
 
 # Configure Flask-Login
